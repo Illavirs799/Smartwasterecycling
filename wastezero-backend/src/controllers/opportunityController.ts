@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Opportunity from '../models/Opportunity';
 import Application from '../models/Application';
+import User from '../models/User';
 import { AuthRequest } from '../middleware/authMiddleware';
 
 // @desc    Create new opportunity
@@ -177,6 +178,66 @@ export const getOpportunityById = async (req: AuthRequest, res: Response): Promi
         res.status(200).json(opportunity);
     } catch (error) {
         console.error('Get opportunity by id error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+// @desc    Get matched opportunities for volunteer
+// @route   GET /api/opportunities/matches
+// @access  Private (Volunteer)
+export const getMatchedOpportunities = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        const { location, skills } = user;
+        let query: any = { status: 'open', isDeleted: false };
+
+        // Construct matching query
+        let matchStage: any[] = [];
+        
+        if (location) {
+            // Priority 1: Exact location match (case insensitive)
+            // Priority 2: partial location match
+            matchStage.push({
+                $addFields: {
+                    locationScore: {
+                        $cond: [{ $regexMatch: { input: "$location", regex: location, options: "i" } }, 10, 0]
+                    }
+                }
+            });
+        }
+
+        if (skills && skills.length > 0) {
+            matchStage.push({
+                $addFields: {
+                    skillScore: {
+                        $multiply: [
+                            { $size: { $setIntersection: ["$skills", skills] } },
+                            5
+                        ]
+                    }
+                }
+            });
+        }
+
+        const opportunities = await Opportunity.aggregate([
+            { $match: query },
+            ...(matchStage.length > 0 ? matchStage : []),
+            {
+                $addFields: {
+                    totalScore: { $add: [{ $ifNull: ["$locationScore", 0] }, { $ifNull: ["$skillScore", 0] }] }
+                }
+            },
+            { $sort: { totalScore: -1, createdAt: -1 } },
+            { $limit: 10 }
+        ]);
+
+        res.status(200).json({ opportunities });
+    } catch (error) {
+        console.error('Match opportunities error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

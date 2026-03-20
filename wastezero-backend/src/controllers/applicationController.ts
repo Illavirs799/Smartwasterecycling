@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Application from '../models/Application';
 import Opportunity from '../models/Opportunity';
 import { AuthRequest } from '../middleware/authMiddleware';
+import Notification from '../models/Notification';
 
 // @desc    Apply for an opportunity
 // @route   POST /api/applications
@@ -147,6 +148,30 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
 
         application.status = status;
         const updatedApplication = await application.save();
+
+        if (status === 'accepted' && opp) {
+            // Update opportunity status to in-progress
+            opp.status = 'in-progress';
+            await opp.save();
+
+            // Notify the volunteer
+            const notification = new Notification({
+                recipient_id: application.volunteer_id,
+                title: 'Application Accepted',
+                message: `Congratulations! Your application for "${opp.title}" has been accepted. The opportunity is now marked as in-progress.`,
+                type: 'success'
+            });
+            await notification.save();
+        } else if (status === 'rejected' && opp) {
+            // Notify the volunteer
+            const notification = new Notification({
+                recipient_id: application.volunteer_id,
+                title: 'Application Status Update',
+                message: `Your application for "${opp.title}" was not accepted at this time.`,
+                type: 'info'
+            });
+            await notification.save();
+        }
 
         res.status(200).json(updatedApplication);
     } catch (error: any) {

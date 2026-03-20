@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule, NgIf, NgFor, NgClass, DatePipe } from '@angular/common';
+import { CommonModule, NgIf, NgFor, NgClass, DatePipe, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ChatService } from '../../services/chat.service';
@@ -25,7 +25,8 @@ export class ChatComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private chatService: ChatService,
-    private authService: AuthService
+    private authService: AuthService,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -37,6 +38,9 @@ export class ChatComponent implements OnInit, OnDestroy {
       if (name) this.receiverName = name;
 
       if (this.currentUser && this.receiverId) {
+        // Mark as read when opening chat
+        this.chatService.markMessagesAsRead(this.receiverId);
+
         if (this.chatSub) this.chatSub.unsubscribe();
         
         this.chatSub = this.chatService.getChatMessages(this.currentUser.id, this.receiverId)
@@ -46,6 +50,10 @@ export class ChatComponent implements OnInit, OnDestroy {
           });
       }
     });
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 
   ngOnDestroy(): void {

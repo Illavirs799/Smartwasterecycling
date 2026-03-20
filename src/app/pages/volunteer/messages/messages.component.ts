@@ -1,22 +1,29 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { Observable, of, map } from 'rxjs';
 import { AuthService, User } from '../../../services/auth.service';
 import { ChatService } from '../../../services/chat.service';
 import { Message } from '../../../models/message.model';
 
+export interface ChatConversation {
+  partnerId: string;
+  partnerName: string;
+  lastMessage: string;
+  lastMessageTime: Date;
+  unreadCount: number;
+}
+
 @Component({
   selector: 'app-messages',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './messages.component.html',
   styleUrls: ['./messages.component.css']
 })
 export class MessagesComponent implements OnInit {
   currentUser: User | null = null;
-  messages$: Observable<Message[]> = of([]);
-  newMessage = '';
+  conversations$: Observable<ChatConversation[]> = of([]);
 
   constructor(
     private authService: AuthService,
@@ -27,18 +34,33 @@ export class MessagesComponent implements OnInit {
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
       if (user) {
-        this.messages$ = this.chatService.messages$.pipe(
-          map(msgs => msgs.filter(m => m.receiverId === user.id || m.senderId === user.id))
+        this.conversations$ = this.chatService.messages$.pipe(
+          map(msgs => {
+            const userMsgs = msgs.filter(m => m.receiverId === user.id || m.senderId === user.id);
+            const convMap = new Map<string, ChatConversation>();
+            
+            userMsgs.forEach(m => {
+              const isSender = m.senderId === user.id;
+              const partnerId = isSender ? m.receiverId : m.senderId;
+              
+              const existing = convMap.get(partnerId);
+              let partnerName = 'User';
+              if (!isSender) partnerName = m.senderName;
+              else if (existing && existing.partnerName !== 'User') partnerName = existing.partnerName;
+
+              convMap.set(partnerId, {
+                partnerId,
+                partnerName,
+                lastMessage: m.content,
+                lastMessageTime: new Date(m.timestamp),
+                unreadCount: (existing?.unreadCount || 0) + (!isSender && !m.isRead ? 1 : 0)
+              });
+            });
+            
+            return Array.from(convMap.values()).sort((a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime());
+          })
         );
       }
     });
-  }
-
-  sendMessage() {
-    if (!this.newMessage.trim() || !this.currentUser) return;
-    
-    // In this mock, we send to a generic 'citizen_user' or similar
-    this.chatService.sendMessage('citizen_user', this.newMessage);
-    this.newMessage = '';
   }
 }

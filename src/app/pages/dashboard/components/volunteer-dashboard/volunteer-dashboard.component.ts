@@ -25,6 +25,7 @@ export class VolunteerDashboardComponent implements OnInit {
   matchedOpportunities$: Observable<Opportunity[]> = of([]);
   assignments$: Observable<WasteRequest[]> = of([]);
   myApplications$: Observable<Application[]> = of([]);
+  volunteerApplications: Application[] = [];
 
   constructor(
     private matchingService: MatchingService,
@@ -39,7 +40,47 @@ export class VolunteerDashboardComponent implements OnInit {
         map(reqs => reqs.filter(r => r.volunteerId === this.currentUser?.id))
       );
       this.myApplications$ = this.applicationService.getVolunteerApplications();
+      this.loadVolunteerApplications();
     }
+  }
+
+  loadVolunteerApplications() {
+    this.applicationService.getVolunteerApplications().subscribe({
+      next: (apps) => this.volunteerApplications = apps,
+      error: (err) => console.error('Failed to load applications:', err)
+    });
+  }
+
+  hasApplied(oppId: string | undefined): boolean {
+    if (!oppId) return false;
+    const id = oppId.toString();
+    return this.volunteerApplications.some(app => {
+      const oid = app.opportunity_id?._id?.toString() || app.opportunity_id?.toString();
+      return oid === id;
+    });
+  }
+
+  getApplicationStatus(oppId: string | undefined): string {
+    if (!oppId) return '';
+    const targetId = oppId.toString();
+    const appRecord = this.volunteerApplications.find(a => {
+      const oid = a.opportunity_id?._id?.toString() || a.opportunity_id?.toString();
+      return oid === targetId;
+    });
+    return appRecord ? appRecord.status : '';
+  }
+
+  applyForProject(project: Opportunity): void {
+    if (!this.currentUser) return;
+
+    this.applicationService.applyForOpportunity(project._id || project.id!).subscribe({
+      next: () => {
+        alert(`Successfully applied for: ${project.title}`);
+        this.loadVolunteerApplications();
+        this.myApplications$ = this.applicationService.getVolunteerApplications();
+      },
+      error: (err) => alert('Application failed: ' + (err.error?.message || err.message))
+    });
   }
 
   getCategoryIcon(cat: string | undefined): string {

@@ -4,7 +4,8 @@ import {
     updateOpportunity,
     deleteOpportunity,
     getOpportunities,
-    getOpportunityById
+    getOpportunityById,
+    getMatchedOpportunities
 } from '../controllers/opportunityController';
 import { authProtect } from '../middleware/authMiddleware';
 import { requireRole } from '../middleware/roleMiddleware';
@@ -17,6 +18,9 @@ router.use(authProtect);
 
 // @route   GET /api/opportunities
 router.get('/', requireRole(['admin', 'volunteer', 'ngo']), getOpportunities);
+
+// @route   GET /api/opportunities/matches
+router.get('/matches', requireRole(['volunteer']), getMatchedOpportunities);
 
 // @route   GET /api/opportunities/:id
 router.get('/:id', requireRole(['admin', 'volunteer', 'ngo']), getOpportunityById);

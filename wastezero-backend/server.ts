@@ -6,6 +6,8 @@ import authRoutes from './src/routes/authRoutes';
 import wasteRequestRoutes from './src/routes/wasteRequestRoutes';
 import opportunityRoutes from './src/routes/opportunityRoutes';
 import applicationRoutes from './src/routes/applicationRoutes';
+import messageRoutes from './src/routes/messageRoutes';
+import notificationRoutes from './src/routes/notificationRoutes';
 import adminRoutes from './src/routes/adminRoutes';
 
 
@@ -28,6 +30,8 @@ app.use('/api', authRoutes);
 app.use('/api/waste-requests', wasteRequestRoutes);
 app.use('/api/opportunities', opportunityRoutes);
 app.use('/api/applications', applicationRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 
 
