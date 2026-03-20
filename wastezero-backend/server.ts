@@ -11,10 +11,17 @@ import notificationRoutes from './src/routes/notificationRoutes';
 import adminRoutes from './src/routes/adminRoutes';
 
 
+import { createServer } from 'http';
+import { initSocket } from './src/services/socketService';
+
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 const port = process.env['PORT'] || 4000;
+
+// Initialize Socket.io
+initSocket(httpServer);
 
 // Middleware
 app.use(cors());
@@ -63,6 +70,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status, database: 'MongoDB Atlas' });
 });
 
-app.listen(port, () => {
-  console.log(`Backend Express server listening on http://localhost:${port}`);
+httpServer.listen(port, () => {
+    console.log(`Backend Express server listening on http://localhost:${port}`);
 });

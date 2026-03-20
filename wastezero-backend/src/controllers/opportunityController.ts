@@ -4,6 +4,8 @@ import Application from '../models/Application';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/authMiddleware';
 
+import { createNotification } from '../services/notificationService';
+
 // @desc    Create new opportunity
 // @route   POST /api/opportunities
 // @access  Private (Admin)
@@ -27,6 +29,22 @@ export const createOpportunity = async (req: AuthRequest, res: Response): Promis
         });
 
         const savedOpportunity = await newOpportunity.save();
+
+        // Notify matching volunteers (simplified: check by location)
+        const matchingVolunteers = await User.find({ 
+            role: 'Volunteer', 
+            location: { $regex: location, $options: 'i' } 
+        });
+
+        for (const volunteer of matchingVolunteers) {
+            await createNotification(
+                volunteer._id.toString(),
+                'New Opportunity Matching Your Profile',
+                `A new opportunity "${title}" is available in ${location}.`,
+                'info'
+            );
+        }
+
         res.status(201).json(savedOpportunity);
     } catch (error) {
         console.error('Create opportunity error:', error);

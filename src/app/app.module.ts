@@ -18,6 +18,7 @@ import { OpportunityFormComponent } from './pages/opportunities/opportunity-form
 import { AdminComponent } from './pages/admin/admin.component';
 import { OpportunityDetailComponent } from './pages/opportunities/opportunity-detail/opportunity-detail.component';
 import { ChatComponent } from './pages/chat/chat.component';
+import { MessagesComponent } from './pages/messages/messages.component';
 import { PickupRequestComponent } from './pages/pickup-request/pickup-request.component';
 
 
@@ -42,7 +43,8 @@ import { PickupRequestComponent } from './pages/pickup-request/pickup-request.co
     LandingComponent,
     LoginComponent,
     RegisterComponent,
-    PickupRequestComponent
+    PickupRequestComponent,
+    MessagesComponent
   ],
   providers: [
     provideClientHydration(),

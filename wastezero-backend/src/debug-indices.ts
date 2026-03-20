@@ -23,7 +23,7 @@ async function debugIndices() {
     // List of problematic indices we've encountered or suspect
     const problematicIndices = ['id_1', 'username_1', 'id'];
     
-    for (const idx of indexes) {
+    for (const idx of indexes as any[]) {
       if (problematicIndices.includes(idx.name) || (idx.key && (idx.key['id'] || idx.key['username']))) {
         // We want to keep email_1 if it's there, but id and username are suspect if not in schema
         if (idx.name !== 'email_1' && idx.name !== '_id_') {

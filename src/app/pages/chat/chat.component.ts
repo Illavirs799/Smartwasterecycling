@@ -20,6 +20,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   receiverId: string | null = null;
   receiverName = 'Organization';
   currentUser: User | null = null;
+  showOptions = false;
   private chatSub: Subscription | null = null;
 
   constructor(
@@ -43,11 +44,14 @@ export class ChatComponent implements OnInit, OnDestroy {
 
         if (this.chatSub) this.chatSub.unsubscribe();
         
-        this.chatSub = this.chatService.getChatMessages(this.currentUser.id, this.receiverId)
-          .subscribe(msgs => {
-            this.messages = msgs;
-            this.scrollToBottom();
-          });
+        // Subscribe to real-time messages from the service
+        this.chatSub = this.chatService.messages$.subscribe(msgs => {
+          this.messages = msgs;
+          this.scrollToBottom();
+        });
+
+        // Trigger initial load of history
+        this.chatService.getChatMessages(this.currentUser.id, this.receiverId).subscribe();
       }
     });
   }
@@ -62,8 +66,48 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   onSendMessage(): void {
     if (this.newMessage.trim() && this.receiverId) {
-      this.chatService.sendMessage(this.receiverId, this.newMessage);
+      this.chatService.sendMessage(this.receiverId, this.newMessage, 'text');
       this.newMessage = '';
+      this.showOptions = false;
+    }
+  }
+
+  toggleOptions(): void {
+    this.showOptions = !this.showOptions;
+  }
+
+  handleFileUpload(event: any, type: 'image' | 'audio'): void {
+    const file = event.target.files[0];
+    if (file && this.receiverId) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        const mediaUrl = e.target.result;
+        const displayName = type === 'image' ? 'Photo' : 'Audio';
+        this.chatService.sendMessage(this.receiverId!, `Shared a ${displayName}`, type, mediaUrl);
+        this.showOptions = false;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  onSharePhoto(): void {
+    // Obsolete: replaced by handleFileUpload for direct device/camera access
+  }
+
+  onShareAudio(): void {
+    const audioUrl = prompt('Enter audio URL (for demo):', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+    if (audioUrl && this.receiverId) {
+      this.chatService.sendMessage(this.receiverId, 'Shared an audio message', 'audio', audioUrl);
+      this.showOptions = false;
+    }
+  }
+
+  onShareLiveLink(): void {
+    const locationName = prompt('Enter location/link label:', 'Current Location');
+    const mapLink = prompt('Enter location/map URL:', 'https://www.google.com/maps?q=12.9716,77.5946');
+    if (mapLink && this.receiverId) {
+      this.chatService.sendMessage(this.receiverId, locationName || 'Shared a location', 'location', mapLink);
+      this.showOptions = false;
     }
   }
 

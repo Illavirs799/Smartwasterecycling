@@ -3,6 +3,7 @@ import Application from '../models/Application';
 import Opportunity from '../models/Opportunity';
 import { AuthRequest } from '../middleware/authMiddleware';
 import Notification from '../models/Notification';
+import { createNotification } from '../services/notificationService';
 
 // @desc    Apply for an opportunity
 // @route   POST /api/applications
@@ -85,7 +86,7 @@ export const getAdminApplications = async (req: AuthRequest, res: Response): Pro
 export const getVolunteerApplications = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const applications = await Application.find({ volunteer_id: req.user.id })
-            .populate('opportunity_id', 'title description location duration status')
+            .populate('opportunity_id', 'title description location duration status ngo_id')
             .sort({ createdAt: -1 });
 
         res.status(200).json(applications);
@@ -124,23 +125,13 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
         
         if (!opp) {
             console.log('Opportunity not found for application:', appId);
-            // If opportunity is gone, we still might want to allow deletion or rejection?
-            // For now, let's just fail or allow admin to bypass if they really want to.
             if (req.user.role?.toLowerCase() !== 'admin') {
                 res.status(404).json({ message: 'Associated opportunity not found. Only admins can modify this.' });
                 return;
             }
         } else {
-            console.log('Authorization Check:', {
-                oppCreator: opp.ngo_id.toString(),
-                currentUserId: req.user.id,
-                isCreator: opp.ngo_id.toString() === req.user.id,
-                isAdmin: req.user.role?.toLowerCase() === 'admin'
-            });
-
             if (opp.ngo_id.toString() !== req.user.id && req.user.role?.toLowerCase() !== 'admin') {
-                const msg = `Not authorized to update this application. Your role: ${req.user.role}, Your ID: ${req.user.id}, NGO Creator ID: ${opp.ngo_id}`;
-                console.log(msg);
+                const msg = `Not authorized to update this application.`;
                 res.status(403).json({ message: msg });
                 return;
             }
@@ -150,32 +141,29 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response): 
         const updatedApplication = await application.save();
 
         if (status === 'accepted' && opp) {
-            // Update opportunity status to in-progress
             opp.status = 'in-progress';
             await opp.save();
 
-            // Notify the volunteer
-            const notification = new Notification({
-                recipient_id: application.volunteer_id,
-                title: 'Application Accepted',
-                message: `Congratulations! Your application for "${opp.title}" has been accepted. The opportunity is now marked as in-progress.`,
-                type: 'success'
-            });
-            await notification.save();
+            // Real-time Notification
+            await createNotification(
+                application.volunteer_id.toString(),
+                'Application Accepted',
+                `Congratulations! Your application for "${opp.title}" has been accepted.`,
+                'success'
+            );
         } else if (status === 'rejected' && opp) {
-            // Notify the volunteer
-            const notification = new Notification({
-                recipient_id: application.volunteer_id,
-                title: 'Application Status Update',
-                message: `Your application for "${opp.title}" was not accepted at this time.`,
-                type: 'info'
-            });
-            await notification.save();
+            // Real-time Notification
+            await createNotification(
+                application.volunteer_id.toString(),
+                'Application Update',
+                `Your application for "${opp.title}" was not accepted at this time.`,
+                'info'
+            );
         }
 
         res.status(200).json(updatedApplication);
     } catch (error: any) {
         console.error('Update application status error:', error.message);
-        res.status(500).json({ message: 'Server error: ' + error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };

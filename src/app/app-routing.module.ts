@@ -9,6 +9,7 @@ import { OpportunityListComponent } from './pages/opportunities/opportunity-list
 import { OpportunityFormComponent } from './pages/opportunities/opportunity-form/opportunity-form.component';
 import { OpportunityDetailComponent } from './pages/opportunities/opportunity-detail/opportunity-detail.component';
 import { ChatComponent } from './pages/chat/chat.component';
+import { MessagesComponent } from './pages/messages/messages.component';
 import { AdminComponent } from './pages/admin/admin.component';
 import { PickupRequestComponent } from './pages/pickup-request/pickup-request.component';
 import { AuthGuard } from './guards/auth.guard';
@@ -38,7 +39,9 @@ const routes: Routes = [
   { path: 'opportunities/new', component: OpportunityFormComponent, canActivate: [AuthGuard] },
   { path: 'opportunities/edit/:id', component: OpportunityFormComponent, canActivate: [AuthGuard] },
   { path: 'opportunities/:id', component: OpportunityDetailComponent, canActivate: [AuthGuard] },
+  { path: 'messages', component: MessagesComponent, canActivate: [AuthGuard] },
   { path: 'chat/:userId/:name', component: ChatComponent, canActivate: [AuthGuard] },
+  { path: 'chat/:userId', component: ChatComponent, canActivate: [AuthGuard] },
   { 
     path: 'admin', 
     component: AdminComponent, 

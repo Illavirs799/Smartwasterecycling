@@ -1,103 +1,130 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { Message } from '../models/message.model';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
+import { io, Socket } from 'socket.io-client';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
+  private socket: Socket | null = null;
   private messagesSubject = new BehaviorSubject<Message[]>([]);
   public messages$ = this.messagesSubject.asObservable();
-  private readonly STORAGE_KEY = 'wastezero_messages';
+  private unreadCountSubject = new BehaviorSubject<number>(0);
+  public unreadCount$ = this.unreadCountSubject.asObservable();
+  private apiUrl = 'http://localhost:5000/api/messages';
 
   constructor(
+    private http: HttpClient,
     private authService: AuthService,
     private notificationService: NotificationService
   ) {
-    this.loadMessages();
+    this.initSocket();
+    this.updateUnreadCountFromConversations();
   }
 
-  private loadMessages(): void {
-    if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored).map((m: any) => ({
-          ...m,
-          timestamp: new Date(m.timestamp)
-        }));
-        this.messagesSubject.next(parsed);
+  private updateUnreadCountFromConversations(): void {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+
+    this.getConversations().subscribe({
+      next: (conversations) => {
+        const totalUnread = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+        this.unreadCountSubject.next(totalUnread);
+      },
+      error: (err) => console.error('Error fetching unread counts:', err)
+    });
+  }
+
+  private initSocket(): void {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+
+    this.socket = io('http://localhost:5000');
+
+    this.socket.on('connect', () => {
+      console.log('Connected to socket server');
+      this.socket?.emit('join', user.id);
+    });
+
+    this.socket.on('new_message', (msg: any) => {
+      console.log('New message received via socket:', msg);
+      const formattedMsg = this.formatMessage(msg);
+      const currentMessages = this.messagesSubject.value;
+      
+      // Check if message is already in list (for sender)
+      if (!currentMessages.some(m => m.id === formattedMsg.id)) {
+        this.messagesSubject.next([...currentMessages, formattedMsg]);
+        
+        // Notify if it's a message for the user
+        if (formattedMsg.receiverId === user.id) {
+            this.unreadCountSubject.next(this.unreadCountSubject.value + 1);
+            this.notificationService.addNotification(
+                'New Message',
+                `Real-time message from ${formattedMsg.senderId}`,
+                'info'
+            );
+        }
       }
-    }
+    });
+
+    this.socket.on('disconnect', () => {
+      console.log('Disconnected from socket server');
+    });
   }
 
-  public unreadCount$: Observable<number> = this.messages$.pipe(
-    map(messages => {
-      const currentUser = this.authService.currentUserValue;
-      if (!currentUser) return 0;
-      return messages.filter(m => m.receiverId === currentUser.id && !m.isRead).length;
-    })
-  );
-
-  private saveMessages(messages: Message[]): void {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(messages));
-      this.messagesSubject.next(messages);
-    }
+  private getHeaders(): HttpHeaders {
+    const token = localStorage.getItem('wastezero_token');
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
   }
 
-  getChatMessages(userId1: string, userId2: string): Observable<Message[]> {
-    return this.messages$.pipe(
-      map(messages => messages.filter(m => 
-        (m.senderId === userId1 && m.receiverId === userId2) ||
-        (m.senderId === userId2 && m.receiverId === userId1)
-      ).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()))
+  private formatMessage(msg: any): Message {
+    return {
+      id: msg._id || msg.id,
+      senderId: msg.sender_id || msg.senderId,
+      senderName: msg.senderName || 'User',
+      receiverId: msg.receiver_id || msg.receiverId,
+      content: msg.content,
+      messageType: msg.messageType || 'text',
+      mediaUrl: msg.mediaUrl,
+      timestamp: new Date(msg.timestamp),
+      isAdmin: msg.isAdmin || false,
+      isRead: msg.isRead || false
+    };
+  }
+
+
+  getChatMessages(currentUserId: string, partnerId: string): Observable<Message[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${partnerId}`, { headers: this.getHeaders() }).pipe(
+        map(msgs => msgs.map(m => this.formatMessage(m))),
+        tap(msgs => this.messagesSubject.next(msgs))
     );
+  }
+
+  getConversations(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/list`, { headers: this.getHeaders() });
   }
 
   markMessagesAsRead(senderId: string): void {
-    const currentUser = this.authService.currentUserValue;
-    if (!currentUser) return;
-
-    const currentMessages = this.messagesSubject.value;
-    let changed = false;
-    const updatedMessages = currentMessages.map(m => {
-      if (m.receiverId === currentUser.id && m.senderId === senderId && !m.isRead) {
-        changed = true;
-        return { ...m, isRead: true };
-      }
-      return m;
-    });
-
-    if (changed) {
-      this.saveMessages(updatedMessages);
-    }
+    // Optional: Implement mark as read API route if needed
   }
 
-  sendMessage(receiverId: string, content: string): void {
-    const currentUser = this.authService.currentUserValue;
-    if (!currentUser) return;
-
-    const newMessage: Message = {
-      id: Math.random().toString(36).substring(2, 11),
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      receiverId: receiverId,
-      content: content,
-      timestamp: new Date(),
-      isAdmin: currentUser.role === 'Admin',
-      isRead: false
-    };
-
-    const currentMessages = this.messagesSubject.value;
-    this.saveMessages([...currentMessages, newMessage]);
-
-    // Notify (Simulation: Receiver would get this)
-    this.notificationService.addNotification(
-      'New Message',
-      `You have a new message from ${currentUser.name}`,
-      'info'
-    );
+  sendMessage(receiverId: string, content: string, messageType: string = 'text', mediaUrl?: string): void {
+    const body = { receiver_id: receiverId, content, messageType, mediaUrl };
+    this.http.post<any>(this.apiUrl, body, { headers: this.getHeaders() }).subscribe({
+        next: (msg) => {
+            const formatted = this.formatMessage(msg);
+            const currentMessages = this.messagesSubject.value;
+            this.messagesSubject.next([...currentMessages, formatted]);
+        },
+        error: (err) => {
+            console.error('Error sending message:', err);
+        }
+    });
   }
 }

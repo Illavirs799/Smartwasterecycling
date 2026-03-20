@@ -1,0 +1,36 @@
+.max-w-800px {
+  max-width: 800px;
+}
+
+.hover-bg-light:hover {
+  background-color: #f8f9fa !important;
+}
+
+.transition {
+  transition: all 0.2s ease-in-out;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.list-group-item {
+  border-left: 0;
+  border-right: 0;
+}
+
+.fw-500 {
+  font-weight: 500;
+}
+
+.list-group-item:last-child {
+  border-bottom: 0;
+}
+
+.shadow-sm {
+  box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+}
+
+.transition:hover {
+  transform: translateX(5px);
+}

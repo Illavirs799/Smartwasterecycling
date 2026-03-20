@@ -4,13 +4,15 @@ import Message from '../models/Message';
 import User from '../models/User';
 import Notification from '../models/Notification';
 import mongoose from 'mongoose';
+import { emitToUser } from '../services/socketService';
+import { createNotification } from '../services/notificationService';
 
 // @desc    Send a message
 // @route   POST /api/messages
 // @access  Private
 export const sendMessage = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { receiver_id, content } = req.body;
+        const { receiver_id, content, messageType, mediaUrl } = req.body;
         const sender_id = req.user.id;
 
         if (!receiver_id || !content) {
@@ -21,20 +23,25 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
         const newMessage = new Message({
             sender_id,
             receiver_id,
-            content
+            content,
+            messageType: messageType || 'text',
+            mediaUrl
         });
 
         await newMessage.save();
 
-        // Create a notification for the receiver
+        // Emit real-time message to receiver
+        emitToUser(receiver_id, 'new_message', newMessage);
+
+        // Also create a real-time notification
         const sender = await User.findById(sender_id);
-        const notification = new Notification({
-            recipient_id: receiver_id,
-            title: 'New Message',
-            message: `You have a new message from ${sender?.name || 'someone'}`,
-            type: 'info'
-        });
-        await notification.save();
+        await createNotification(
+            receiver_id,
+            'New Message',
+            `You have a new message from ${sender?.name || 'User'}`,
+            'info'
+        );
+        res.status(201).json(newMessage);
 
         res.status(201).json(newMessage);
     } catch (error) {
@@ -96,7 +103,16 @@ export const getConversationsList = async (req: AuthRequest, res: Response): Pro
                     },
                     lastMessage: { $first: "$content" },
                     lastMessageTime: { $first: "$timestamp" },
-                    messageId: { $first: "$_id" }
+                    messageId: { $first: "$_id" },
+                    unreadCount: {
+                        $sum: {
+                            $cond: [
+                                { $and: [{ $eq: ["$receiver_id", userId] }, { $eq: ["$isRead", false] }] },
+                                1,
+                                0
+                            ]
+                        }
+                    }
                 }
             },
             {
@@ -116,6 +132,7 @@ export const getConversationsList = async (req: AuthRequest, res: Response): Pro
                     partnerName: '$partner.name',
                     lastMessage: 1,
                     lastMessageTime: 1,
+                    unreadCount: 1,
                     _id: 0
                 }
             },

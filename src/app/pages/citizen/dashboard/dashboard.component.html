@@ -36,6 +36,12 @@
           <div class="db-list-info">
             <div class="db-list-title">{{ actives[0].wasteCategory }} — {{ actives[0].description }}</div>
             <div class="db-list-meta">Scheduled for: {{ (actives[0].scheduledDate | date:'medium') || 'Awaiting Schedule' }}</div>
+            <div class="mt-2 text-start" *ngIf="actives[0].volunteerId">
+              <button class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+                      [routerLink]="['/chat', actives[0].volunteerId, actives[0].volunteerName || 'Volunteer']">
+                <i class="bi bi-person-badge me-1"></i> Message Volunteer
+              </button>
+            </div>
           </div>
           <span class="db-status-chip" [class.scheduled]="actives[0].status === 'Scheduled'">{{ actives[0].status }}</span>
         </div>

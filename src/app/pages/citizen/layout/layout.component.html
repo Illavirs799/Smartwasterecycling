@@ -30,6 +30,15 @@
         <span class="bottom-nav-icon">📜</span>
         <span>History</span>
       </a>
+      <a class="nav-link-bottom position-relative" routerLink="/citizen/messages" routerLinkActive="active">
+        <span class="bottom-nav-icon">💬</span>
+        <span>Messages</span>
+        <span class="badge rounded-pill bg-danger border border-white position-absolute top-0 start-50 translate-middle-y" 
+              style="font-size: 10px;"
+              *ngIf="(unreadCount$ | async) as count">
+          {{ count }}
+        </span>
+      </a>
       <a class="nav-link-bottom" (click)="logout()" style="cursor: pointer;">
         <span class="bottom-nav-icon">🚪</span>
         <span>Logout</span>
