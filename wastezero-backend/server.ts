@@ -47,17 +47,20 @@ const mongoUri = process.env['MONGODB_URI'];
 if (!mongoUri) {
   console.error('⚠️ WARNING: MONGODB_URI is not defined in .env file');
 } else {
-  console.log('⏳ Connecting to MongoDB...');
+  // Mask URI for logging
+  const maskedUri = mongoUri.replace(/\/\/.*@/, '//****:****@');
+  console.log(`⏳ Connecting to MongoDB at ${maskedUri}...`);
   
   // Disable command buffering so queries fail fast if connection is down
   mongoose.set('bufferCommands', false);
 
   mongoose.connect(mongoUri, {
-    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+    serverSelectionTimeoutMS: 10000, // Timeout after 10s for more stability
   })
     .then(() => console.log('✅ Connected to MongoDB Atlas'))
     .catch(err => {
       console.error('❌ MongoDB Connection Error:', err.message);
+      console.error('🔍 Error Details:', err); // Log full error object for diagnostics
       if (err.message.includes('querySrv ESERVFAIL') || err.message.includes('ECONNREFUSED') || err.message.includes('selection timed out')) {
         console.error('👉 TIP: This error often happens on restrictive networks or if your IP is not whitelisted in MongoDB Atlas.');
       }
