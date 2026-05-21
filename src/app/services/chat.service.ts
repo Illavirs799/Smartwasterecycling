@@ -5,6 +5,7 @@ import { Message } from '../models/message.model';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
 import { io, Socket } from 'socket.io-client';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -15,7 +16,7 @@ export class ChatService {
   public messages$ = this.messagesSubject.asObservable();
   private unreadCountSubject = new BehaviorSubject<number>(0);
   public unreadCount$ = this.unreadCountSubject.asObservable();
-  private apiUrl = 'http://localhost:5000/api/messages';
+  private apiUrl = `${environment.apiUrl}/messages`;
 
   constructor(
     private http: HttpClient,
@@ -43,7 +44,7 @@ export class ChatService {
     const user = this.authService.currentUserValue;
     if (!user) return;
 
-    this.socket = io('http://localhost:5000');
+    this.socket = io(environment.socketUrl);
 
     this.socket.on('connect', () => {
       console.log('Connected to socket server');

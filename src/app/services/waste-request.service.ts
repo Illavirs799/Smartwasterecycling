@@ -4,11 +4,13 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { WasteRequest } from '../models/waste-request.model';
 
+import { environment } from '../../environments/environment';
+
 @Injectable({
   providedIn: 'root'
 })
 export class WasteRequestService {
-  private apiUrl = 'http://localhost:5000/api/waste-requests';
+  private apiUrl = `${environment.apiUrl}/waste-requests`;
 
   // We keep the subject if any components bind to it directly with async pipe
   private requestsSubject = new BehaviorSubject<WasteRequest[]>([]);

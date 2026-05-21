@@ -3,6 +3,7 @@ import Opportunity from '../models/Opportunity';
 import Application from '../models/Application';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/authMiddleware';
+import AdminLog from '../models/AdminLog';
 
 import { createNotification } from '../services/notificationService';
 
@@ -30,20 +31,26 @@ export const createOpportunity = async (req: AuthRequest, res: Response): Promis
 
         const savedOpportunity = await newOpportunity.save();
 
-        // Notify matching volunteers (simplified: check by location)
-        const matchingVolunteers = await User.find({ 
-            role: 'Volunteer', 
-            location: { $regex: location, $options: 'i' } 
-        });
+        // 1. Notify the Admin/NGO who created the opportunity
+        await createNotification(
+            req.user.id,
+            'Opportunity Created',
+            `You successfully created the new opportunity: "${title}".`,
+            'success'
+        );
 
-        for (const volunteer of matchingVolunteers) {
-            await createNotification(
-                volunteer._id.toString(),
-                'New Opportunity Matching Your Profile',
-                `A new opportunity "${title}" is available in ${location}.`,
+        // 2. Notify all Volunteers
+        const volunteers = await User.find({ role: { $in: ['volunteer', 'Volunteer', 'VOLUNTEER'] } });
+        
+        // Fire notifications asynchronously 
+        Promise.all(volunteers.map(v => 
+            createNotification(
+                v.id,
+                'New Opportunity Available',
+                `You have a new opportunity: "${title}" in ${location}.`,
                 'info'
-            );
-        }
+            )
+        )).catch(err => console.error('Failed to send volunteer notifications:', err));
 
         res.status(201).json(savedOpportunity);
     } catch (error) {
@@ -98,6 +105,21 @@ export const deleteOpportunity = async (req: AuthRequest, res: Response): Promis
         if (!deletedOpportunity) {
             res.status(404).json({ message: 'Opportunity not found' });
             return;
+        }
+
+        // Notify the Admin/NGO who deleted it
+        await createNotification(
+            req.user.id,
+            'Opportunity Deleted',
+            `You successfully deleted the opportunity: "${deletedOpportunity.title}".`,
+            'info'
+        );
+
+        if (req.user.role?.toLowerCase() === 'admin') {
+            await AdminLog.create({
+                action: `Removed Opportunity: ${deletedOpportunity.title} (ID: ${id})`,
+                user_id: deletedOpportunity.ngo_id
+            });
         }
 
         res.status(200).json({ message: 'Opportunity permanently deleted' });

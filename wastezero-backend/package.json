@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node server.ts",
-    "dev": "nodemon server.ts"
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "start:dev": "ts-node server.ts",
+    "dev": "node --dns-result-order=ipv4first ./node_modules/nodemon/bin/nodemon.js server.ts"
   },
   "keywords": [],
   "author": "",

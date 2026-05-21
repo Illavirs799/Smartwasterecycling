@@ -3,6 +3,8 @@ import { AuthRequest } from '../middleware/authMiddleware';
 import WasteRequest from '../models/WasteRequest';
 import Application from '../models/Application';
 import User from '../models/User';
+import AdminLog from '../models/AdminLog';
+import { createNotification } from '../services/notificationService';
 
 export const getAnalytics = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -121,6 +123,130 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
         });
     } catch (error) {
         console.error('Get analytics error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const getUsersActivity = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const users = await User.find({}, '-password').lean();
+        const applications = await Application.find().lean();
+        const wasteRequests = await WasteRequest.find().lean();
+
+        const activityData = users.map(user => {
+            const userId = user._id.toString();
+            let activity = {};
+
+            if (user.role === 'volunteer') {
+                const userApps = applications.filter(a => a.volunteer_id?.toString() === userId);
+                const acceptedApps = userApps.filter(a => a.status === 'accepted').length;
+                const completedPickups = wasteRequests.filter(w => w.volunteerId === userId && w.status === 'Completed').length;
+                
+                activity = {
+                    applicationsSubmitted: userApps.length,
+                    applicationsAccepted: acceptedApps,
+                    completedPickups: completedPickups
+                };
+            } else if (user.role === 'citizen' || user.role === 'user') {
+                const userRequests = wasteRequests.filter(w => w.citizenId === userId);
+                const completedRequests = userRequests.filter(w => w.status === 'Completed').length;
+                
+                activity = {
+                    requestsCreated: userRequests.length,
+                    requestsCompleted: completedRequests
+                };
+            }
+
+            return {
+                id: userId,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                location: user.location,
+                joinedDate: user.created_at || (user as any).createdAt,
+                skills: user.skills,
+                bio: user.bio,
+                profileImage: user.profileImage,
+                isSuspended: (user as any).isSuspended || false,
+                activity: activity
+            };
+        });
+
+        res.status(200).json(activityData);
+    } catch (error) {
+        console.error('Get users activity error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const suspendUser = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.params.id;
+        const userToSuspend = await User.findById(userId);
+        if (!userToSuspend) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        (userToSuspend as any).isSuspended = !(userToSuspend as any).isSuspended;
+        await userToSuspend.save();
+
+        const action = (userToSuspend as any).isSuspended ? 'Suspended User' : 'Unsuspended User';
+        
+        await AdminLog.create({
+            action: action,
+            user_id: userToSuspend._id
+        });
+
+        res.status(200).json({ message: `User ${(userToSuspend as any).isSuspended ? 'suspended' : 'unsuspended'} successfully`, user: userToSuspend });
+    } catch (error) {
+        console.error('Suspend user error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const broadcastSystemAlert = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { message, targetRole } = req.body;
+        if (!message) {
+            res.status(400).json({ message: 'Message is required' });
+            return;
+        }
+
+        let query = {};
+        if (targetRole && targetRole !== 'all') {
+            query = { role: targetRole.toLowerCase() };
+        }
+
+        const targetUsers = await User.find(query);
+        
+        Promise.all(targetUsers.map(u => 
+            createNotification(
+                u.id,
+                'System Alert',
+                message,
+                'warning'
+            )
+        )).catch(err => console.error('Error broadcasting to users:', err));
+
+        await AdminLog.create({
+            action: `Broadcasted System Alert to ${targetRole || 'all'}`,
+            user_id: req.user.id
+        });
+
+        res.status(200).json({ message: `Alert broadcasted to ${targetUsers.length} users.` });
+    } catch (error) {
+        console.error('Broadcast error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const getAdminLogs = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const logs = await AdminLog.find().populate('user_id', 'name email role').sort({ timestamp: -1 });
+        res.status(200).json(logs);
+    } catch (error) {
+        console.error('Get admin logs error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

@@ -4,11 +4,13 @@ import { Observable, map } from 'rxjs';
 import { Opportunity } from '../models/opportunity.model';
 import { AuthService } from './auth.service';
 
+import { environment } from '../../environments/environment';
+
 @Injectable({
   providedIn: 'root'
 })
 export class OpportunityService {
-  private apiUrl = 'http://localhost:5000/api/opportunities';
+  private apiUrl = `${environment.apiUrl}/opportunities`;
 
   constructor(private http: HttpClient, private authService: AuthService) { }
 
@@ -39,6 +41,28 @@ export class OpportunityService {
           organizationName: o.ngo_id?.name || o.organizationName || 'Unknown NGO',
           skillsRequired: o.skills || o.skillsRequired || [],
           createdAt: o.createdAt ? new Date(o.createdAt) : new Date(o.updatedAt || Date.now())
+        }));
+        if (res.opportunities) {
+          res.opportunities = data;
+          return res;
+        }
+        return data;
+      })
+    );
+  }
+
+  getMatchedOpportunities(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/matches`, { headers: this.getHeaders() }).pipe(
+      map((res: any) => {
+        let data = res.opportunities || res;
+        data = data.map((o: any) => ({
+          ...o,
+          id: o._id || o.id,
+          organizationId: o.ngo_id?._id || o.organizationId || o.ngo_id,
+          organizationName: o.ngo_id?.name || o.organizationName || 'Unknown NGO',
+          skillsRequired: o.skills || o.skillsRequired || [],
+          createdAt: o.createdAt ? new Date(o.createdAt) : new Date(o.updatedAt || Date.now()),
+          matchScore: o.totalScore || 0
         }));
         if (res.opportunities) {
           res.opportunities = data;

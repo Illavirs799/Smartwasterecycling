@@ -1,18 +1,20 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { Observable, map } from 'rxjs';
 import { WasteRequest } from '../../../models/waste-request.model';
 import { AuthService, User } from '../../../services/auth.service';
 import { WasteRequestService } from '../../../services/waste-request.service';
 import { OpportunityService } from '../../../services/opportunity.service';
 import { ApplicationService } from '../../../services/application.service';
+import { NotificationService } from '../../../services/notification.service';
 import { Opportunity } from '../../../models/opportunity.model';
 import { Application } from '../../../models/application.model';
 
 @Component({
   selector: 'app-opportunities',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './opportunities.component.html',
   styleUrls: ['./opportunities.component.css']
 })
@@ -27,7 +29,8 @@ export class OpportunitiesComponent implements OnInit {
     private authService: AuthService,
     private wasteService: WasteRequestService,
     private opportunityService: OpportunityService,
-    private applicationService: ApplicationService
+    private applicationService: ApplicationService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit() {
@@ -76,8 +79,8 @@ export class OpportunitiesComponent implements OnInit {
       volunteerName: this.currentUser.name,
       scheduledDate: new Date()
     }).subscribe({
-      next: () => alert('Pickup accepted successfully! Check "My Assignments".'),
-      error: (err: any) => alert('Failed to accept pickup: ' + (err.error?.message || err.message))
+      next: () => this.notificationService.addNotification('Success', 'Pickup accepted successfully! Check "My Pickups".', 'success'),
+      error: (err: any) => this.notificationService.addNotification('Failed', 'Failed to accept pickup: ' + (err.error?.message || err.message), 'danger')
     });
   }
 
@@ -86,10 +89,10 @@ export class OpportunitiesComponent implements OnInit {
 
     this.applicationService.applyForOpportunity(project._id || project.id!).subscribe({
       next: () => {
-        alert(`Successfully applied for: ${project.title}`);
+        this.notificationService.addNotification('Applied', `Successfully applied for: ${project.title}`, 'success');
         this.loadVolunteerApplications();
       },
-      error: (err) => alert('Application failed: ' + (err.error?.message || err.message))
+      error: (err) => this.notificationService.addNotification('Failed', 'Application failed: ' + (err.error?.message || err.message), 'danger')
     });
   }
 

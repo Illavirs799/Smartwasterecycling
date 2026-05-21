@@ -4,6 +4,8 @@ import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { AuthService } from './auth.service';
 
+import { environment } from '../../environments/environment';
+
 export interface Notification {
   id: string;
   title: string;
@@ -20,18 +22,33 @@ export class NotificationService {
   private socket: Socket | null = null;
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
   public notifications$ = this.notificationsSubject.asObservable();
-  private apiUrl = 'http://localhost:5000/api/notifications';
+  private apiUrl = `${environment.apiUrl}/notifications`;
 
   constructor(private http: HttpClient, private authService: AuthService) {
-    this.initSocket();
-    this.loadNotifications();
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.initSocket(user);
+        this.loadNotifications();
+      } else {
+        // User logged out
+        this.notificationsSubject.next([]);
+        if (this.socket) {
+          this.socket.disconnect();
+          this.socket = null;
+        }
+      }
+    });
   }
 
-  private initSocket(): void {
-    const user = this.authService.currentUserValue;
+  private initSocket(user: any): void {
     if (!user) return;
+    
+    // Disconnect old socket if any
+    if (this.socket) {
+      this.socket.disconnect();
+    }
 
-    this.socket = io('http://localhost:5000');
+    this.socket = io(environment.socketUrl);
     this.socket.on('connect', () => {
       this.socket?.emit('join', user.id);
     });

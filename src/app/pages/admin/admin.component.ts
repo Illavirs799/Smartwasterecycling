@@ -8,8 +8,11 @@ import { DashboardService, DashboardStats } from '../../services/dashboard.servi
 import { OpportunityService } from '../../services/opportunity.service';
 import { ApplicationService } from '../../services/application.service';
 import { AdminReportService } from '../../services/admin-report.service';
+import { ChatService } from '../../services/chat.service';
 import { Opportunity } from '../../models/opportunity.model';
 import { Application } from '../../models/application.model';
+import { NotificationService, Notification } from '../../services/notification.service';
+import { Observable } from 'rxjs';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -41,11 +44,30 @@ export class AdminComponent implements OnInit, AfterViewInit {
     responseRateChange: 0
   };
 
+  // User Activity Data
+  activityUsers: any[] = [];
+  filteredActivityUsers: any[] = [];
+  selectedUserActivity: any = null;
+  userActivityFilter: string = 'all';
+
+  // System Alerts
+  alertMessage: string = '';
+  alertTarget: string = 'all';
+
+  // Admin Logs
+  adminLogs: any[] = [];
+
   // Charts
   private engagementChart: any;
   private reportsEngagementChart: any;
   private opsByTypeChart: any;
   private isBrowser: boolean;
+
+  // Notifications & Messages
+  unreadNotifsCount$: Observable<number>;
+  notifications$: Observable<Notification[]>;
+  unreadCount$: Observable<number>;
+  conversations$: Observable<any[]> = new Observable();
 
 
   // Applications view state
@@ -55,6 +77,15 @@ export class AdminComponent implements OnInit, AfterViewInit {
   // Form State for Opportunities
   showOpportunityForm = false;
   editingOpportunityId: string | null = null;
+  
+  get activeOpportunitiesCount(): number {
+    return this.allOpportunities.filter(o => o.status === 'open' || o.status === 'in-progress').length;
+  }
+
+  get completedOpportunitiesCount(): number {
+    return this.allOpportunities.filter(o => o.status === 'closed').length;
+  }
+
   opportunityForm: any = {
     title: '',
     description: '',
@@ -92,7 +123,11 @@ export class AdminComponent implements OnInit, AfterViewInit {
   menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'bi-grid-1x2' },
     { id: 'all-opportunities', label: 'Opportunities', icon: 'bi-briefcase' },
+    { id: 'user-activity', label: 'User Activity', icon: 'bi-people' },
     { id: 'reports', label: 'Reports', icon: 'bi-file-earmark-bar-graph' },
+    { id: 'admin-logs', label: 'Admin Logs', icon: 'bi-shield-lock' },
+    { id: 'messages', label: 'Messages', icon: 'bi-chat-dots' },
+    { id: 'notifications', label: 'Notifications', icon: 'bi-bell' },
     { id: 'profile', label: 'My Profile', icon: 'bi-person-circle' }
   ];
 
@@ -103,10 +138,46 @@ export class AdminComponent implements OnInit, AfterViewInit {
     private opportunityService: OpportunityService,
     private applicationService: ApplicationService,
     private adminReportService: AdminReportService,
+    private notificationService: NotificationService,
+    private chatService: ChatService,
     private ngZone: NgZone,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
+    this.unreadNotifsCount$ = this.notificationService.getUnreadCount();
+    this.notifications$ = this.notificationService.notifications$;
+    this.unreadCount$ = this.chatService.unreadCount$;
+    
+    // Setup conversations dynamically based on latest messages
+    import('rxjs').then(({ map, of }) => {
+      this.conversations$ = this.chatService.messages$.pipe(
+        map((msgs: any[]) => {
+          if (!this.currentUser) return [];
+          const userMsgs = msgs.filter(m => m.receiverId === this.currentUser!.id || m.senderId === this.currentUser!.id);
+          const convMap = new Map<string, any>();
+          
+          userMsgs.forEach(m => {
+            const isSender = m.senderId === this.currentUser!.id;
+            const partnerId = isSender ? m.receiverId : m.senderId;
+            const existing = convMap.get(partnerId);
+            
+            let partnerName = 'User';
+            if (!isSender) partnerName = m.senderName;
+            else if (existing && existing.partnerName !== 'User') partnerName = existing.partnerName;
+
+            convMap.set(partnerId, {
+              partnerId,
+              partnerName,
+              lastMessage: m.content,
+              lastMessageTime: new Date(m.timestamp),
+              unreadCount: (existing?.unreadCount || 0) + (!isSender && !m.isRead ? 1 : 0)
+            });
+          });
+          
+          return Array.from(convMap.values()).sort((a: any, b: any) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime());
+        })
+      );
+    });
   }
 
   ngOnInit() {
@@ -282,6 +353,10 @@ export class AdminComponent implements OnInit, AfterViewInit {
     this.loadOpportunities();
     this.loadApplications();
 
+    if (this.activeMenu === 'user-activity') {
+      this.loadUsersActivity();
+    }
+
     try {
       this.adminReportService.getOpportunityStats().subscribe((stats: any) => {
         this.oppStats = stats;
@@ -296,6 +371,67 @@ export class AdminComponent implements OnInit, AfterViewInit {
     }
 
     // Dashboard stats are now updated from analytics data in the updateAnalytics subscription
+  }
+
+  loadUsersActivity() {
+    this.adminReportService.getUsersActivity().subscribe({
+      next: (users) => {
+        this.activityUsers = users;
+        this.filterActivityUsers();
+      },
+      error: (err) => console.error('Failed to load user activity:', err)
+    });
+  }
+
+  filterActivityUsers() {
+    if (this.userActivityFilter === 'all') {
+      this.filteredActivityUsers = [...this.activityUsers];
+    } else {
+      this.filteredActivityUsers = this.activityUsers.filter(u => u.role.toLowerCase() === this.userActivityFilter);
+    }
+  }
+
+  setActivityFilter(filter: string) {
+    this.userActivityFilter = filter;
+    this.filterActivityUsers();
+  }
+
+  viewUserActivityProfile(user: any) {
+    this.selectedUserActivity = user;
+  }
+
+  closeUserActivityProfile() {
+    this.selectedUserActivity = null;
+  }
+
+  toggleUserSuspension(user: any) {
+    if (confirm(`Are you sure you want to ${user.isSuspended ? 'unsuspend' : 'suspend'} ${user.name}?`)) {
+      this.adminReportService.suspendUser(user.id).subscribe({
+        next: (res) => {
+          user.isSuspended = !user.isSuspended;
+          alert(res.message);
+        },
+        error: (err) => alert(err.error?.message || 'Error updating suspension status')
+      });
+    }
+  }
+
+  broadcastSystemAlert() {
+    if (!this.alertMessage.trim()) return;
+    this.adminReportService.broadcastSystemAlert(this.alertMessage, this.alertTarget).subscribe({
+      next: (res) => {
+        alert(res.message);
+        this.alertMessage = '';
+      },
+      error: (err) => alert(err.error?.message || 'Error broadcasting alert')
+    });
+  }
+
+  loadAdminLogs() {
+    this.adminReportService.getAdminLogs().subscribe({
+      next: (logs) => this.adminLogs = logs,
+      error: (err) => console.error('Error loading logs', err)
+    });
   }
 
   updateAnalytics(range: string = this.selectedRange) {
@@ -319,6 +455,20 @@ export class AdminComponent implements OnInit, AfterViewInit {
       });
   }
 
+
+  // --- Notifications ---
+  markAsRead(id: string) {
+    this.notificationService.markAsRead(id);
+  }
+
+  getIconForType(type: string): string {
+    switch(type) {
+      case 'success': return 'bi-check-circle-fill';
+      case 'danger': return 'bi-exclamation-circle-fill';
+      case 'warning': return 'bi-exclamation-triangle-fill';
+      default: return 'bi-info-circle-fill';
+    }
+  }
 
   // --- Opportunities Management ---
 
@@ -501,6 +651,14 @@ export class AdminComponent implements OnInit, AfterViewInit {
       this.showOpportunityForm = false;
       this.viewingApplicationsFor = null;
       this.currentOpportunity = null;
+    }
+
+    if (menuId === 'user-activity' && this.activityUsers.length === 0) {
+      this.loadUsersActivity();
+    }
+    
+    if (menuId === 'admin-logs') {
+      this.loadAdminLogs();
     }
 
     if (this.isBrowser && (menuId === 'dashboard' || menuId === 'reports')) {

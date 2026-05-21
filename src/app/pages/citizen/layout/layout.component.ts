@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService, User } from '../../../services/auth.service';
 import { ThemeService } from '../../../services/theme.service';
 import { ChatService } from '../../../services/chat.service';
+import { NotificationService } from '../../../services/notification.service';
 
 @Component({
   selector: 'app-citizen-layout',
@@ -17,11 +18,13 @@ export class CitizenLayoutComponent implements OnInit {
   sidebarCollapsed = false;
   isDarkMode$ = this.themeService.isDarkMode$;
   unreadCount$ = this.chatService.unreadCount$;
+  unreadNotifsCount$ = this.notificationService.getUnreadCount();
 
   constructor(
     private authService: AuthService,
     private themeService: ThemeService,
     private chatService: ChatService,
+    private notificationService: NotificationService,
     private router: Router
   ) {}
 

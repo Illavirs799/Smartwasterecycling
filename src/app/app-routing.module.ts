@@ -62,6 +62,7 @@ const routes: Routes = [
       { path: 'pickup-history', loadComponent: () => import('./pages/citizen/pickup-history/pickup-history.component').then(m => m.PickupHistoryComponent) },
       { path: 'statistics', loadComponent: () => import('./pages/citizen/statistics/statistics.component').then(m => m.StatisticsComponent) },
       { path: 'messages', loadComponent: () => import('./pages/citizen/messages/messages.component').then(m => m.MessagesComponent) },
+      { path: 'notifications', loadComponent: () => import('./pages/citizen/notifications/notifications.component').then(m => m.NotificationsComponent) },
       { path: 'profile', loadComponent: () => import('./pages/citizen/profile/profile.component').then(m => m.ProfileComponent) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
@@ -78,6 +79,7 @@ const routes: Routes = [
       { path: 'opportunities', loadComponent: () => import('./pages/volunteer/opportunities/opportunities.component').then(m => m.OpportunitiesComponent) },
       { path: 'my-pickups', loadComponent: () => import('./pages/volunteer/my-pickups/my-pickups.component').then(m => m.MyPickupsComponent) },
       { path: 'messages', loadComponent: () => import('./pages/volunteer/messages/messages.component').then(m => m.MessagesComponent) },
+      { path: 'notifications', loadComponent: () => import('./pages/volunteer/notifications/notifications.component').then(m => m.NotificationsComponent) },
       { path: 'profile', loadComponent: () => import('./pages/volunteer/profile/profile.component').then(m => m.ProfileComponent) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

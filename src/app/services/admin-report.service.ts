@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { OpportunityService } from './opportunity.service';
+import { environment } from '../../environments/environment';
 import { map, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AdminReportService {
-  private apiUrl = 'http://localhost:5000/api/admin';
+  private apiUrl = `${environment.apiUrl}/admin`;
 
   constructor(
     private http: HttpClient,
@@ -26,6 +27,22 @@ export class AdminReportService {
 
   getEngagementAnalytics(range: string = '1week'): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/analytics?range=${range}`, { headers: this.getHeaders() });
+  }
+
+  getUsersActivity(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/users`, { headers: this.getHeaders() });
+  }
+
+  suspendUser(userId: string): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/users/${userId}/suspend`, {}, { headers: this.getHeaders() });
+  }
+
+  broadcastSystemAlert(message: string, targetRole: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/alerts`, { message, targetRole }, { headers: this.getHeaders() });
+  }
+
+  getAdminLogs(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/logs`, { headers: this.getHeaders() });
   }
 
 

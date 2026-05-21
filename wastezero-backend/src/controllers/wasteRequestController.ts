@@ -1,10 +1,36 @@
 import { Request, Response } from 'express';
 import WasteRequest from '../models/WasteRequest';
+import User from '../models/User';
+import { createNotification } from '../services/notificationService';
 
 export const createRequest = async (req: Request, res: Response): Promise<void> => {
   try {
     const newRequest = new WasteRequest(req.body);
     const savedRequest = await newRequest.save();
+
+    // Notify the Citizen who created the request
+    if (savedRequest.citizenId) {
+      await createNotification(
+        savedRequest.citizenId,
+        'Pickup Scheduled',
+        `You successfully added a new pickup request for ${savedRequest.wasteCategory}.`,
+        'success'
+      );
+    }
+
+    // Notify all Volunteers that a new pickup is available
+    const volunteers = await User.find({ role: { $in: ['volunteer', 'Volunteer', 'VOLUNTEER'] } });
+    
+    // Fire notifications asynchronously so we don't block the API response
+    Promise.all(volunteers.map(v => 
+      createNotification(
+        v.id,
+        'New Pickup Requested',
+        `A new ${savedRequest.wasteCategory} pickup is available!`,
+        'info'
+      )
+    )).catch(err => console.error('Failed to send volunteer notifications:', err));
+
     res.status(201).json(savedRequest);
   } catch (err: any) {
     console.error('Error creating waste request:', err);

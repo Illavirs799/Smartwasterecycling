@@ -44,4 +44,5 @@ Thumbs.db
 # Backend
 wastezero-backend/node_modules/
 wastezero-backend/.env
+wastezero-backend/dist/
 .env

@@ -100,11 +100,18 @@
             <input type="text" class="form-control bg-light border-0" placeholder="Search...">
           </div>
         </div>
-        <button class="btn btn-light rounded-circle position-relative">
+        <button class="btn btn-light rounded-circle position-relative me-2" (click)="setActiveMenu('messages')">
+          <i class="bi bi-chat-dots"></i>
+          <span *ngIf="(unreadCount$ | async) as count" [class.d-none]="count === 0"
+            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-2 border-white" style="font-size: 0.65rem; padding: 0.25rem 0.4rem;">
+            {{ count }}
+          </span>
+        </button>
+        <button class="btn btn-light rounded-circle position-relative" (click)="setActiveMenu('notifications')">
           <i class="bi bi-bell"></i>
-          <span
-            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-2 border-white p-1">
-            <span class="visually-hidden">unread notifications</span>
+          <span *ngIf="(unreadNotifsCount$ | async) as count" [class.d-none]="count === 0"
+            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-2 border-white" style="font-size: 0.65rem; padding: 0.25rem 0.4rem;">
+            {{ count }}
           </span>
         </button>
       </div>
@@ -114,46 +121,64 @@
       <!-- Dashboard Overview (shown when activeMenu is 'dashboard') -->
       <div *ngIf="activeMenu === 'dashboard'">
         <div class="row g-4 mb-4">
-          <div class="col-md-3">
+          <div class="col-md-4">
             <div class="stat-card p-4 rounded-4 shadow-sm h-100 bg-white border">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-muted fw-bold small text-uppercase">Active Users</span>
+                <span class="text-muted fw-bold small text-uppercase">Total Users</span>
                 <div class="stat-icon bg-blue-light text-blue rounded p-2"><i class="bi bi-people"></i></div>
               </div>
               <h2 class="fw-bold mb-1">{{ stats.activeUsers | number }}</h2>
-              <div class="small text-success"><i class="bi bi-arrow-up-short"></i> {{ stats.activeUsersChange }}</div>
+              <div class="small text-success"><i class="bi bi-arrow-up-short"></i> Registered Users</div>
             </div>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <div class="stat-card p-4 rounded-4 shadow-sm h-100 bg-white border">
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <span class="text-muted fw-bold small text-uppercase">Total Volunteers</span>
                 <div class="stat-icon bg-green-light text-green rounded p-2"><i class="bi bi-heart"></i></div>
               </div>
               <h2 class="fw-bold mb-1">{{ stats.totalVolunteers | number }}</h2>
-              <div class="small text-success"><i class="bi bi-arrow-up-short"></i> {{ stats.totalVolunteersChange }}
-              </div>
+              <div class="small text-success"><i class="bi bi-arrow-up-short"></i> Registered Volunteers</div>
             </div>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <div class="stat-card p-4 rounded-4 shadow-sm h-100 bg-white border">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-muted fw-bold small text-uppercase">Completed Pickups</span>
-                <div class="stat-icon bg-orange-light text-orange rounded p-2"><i class="bi bi-truck"></i></div>
+                <span class="text-muted fw-bold small text-uppercase">Total Opportunities</span>
+                <div class="stat-icon bg-purple-light text-purple rounded p-2"><i class="bi bi-briefcase"></i></div>
               </div>
-              <h2 class="fw-bold mb-1">{{ stats.completedPickups | number }}</h2>
-              <div class="small text-success"><i class="bi bi-arrow-up-short"></i> {{ stats.completedPickupsChange }}
-              </div>
+              <h2 class="fw-bold mb-1">{{ allOpportunities.length | number }}</h2>
+              <div class="small text-success"><i class="bi bi-arrow-up-short"></i> Opportunities Created</div>
             </div>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <div class="stat-card p-4 rounded-4 shadow-sm h-100 bg-white border">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-muted fw-bold small text-uppercase">System Health</span>
-                <div class="stat-icon bg-purple-light text-purple rounded p-2"><i class="bi bi-activity"></i></div>
+                <span class="text-muted fw-bold small text-uppercase">Total Applications</span>
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning rounded p-2"><i class="bi bi-file-earmark-text"></i></div>
               </div>
-              <h2 class="fw-bold mb-1">{{ stats.systemHealth }}</h2>
-              <div class="small text-muted">{{ stats.systemHealthStatus }}</div>
+              <h2 class="fw-bold mb-1">{{ applications.length | number }}</h2>
+              <div class="small text-success"><i class="bi bi-arrow-up-short"></i> Applications Submitted</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-card p-4 rounded-4 shadow-sm h-100 bg-white border">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted fw-bold small text-uppercase">Active Opportunities</span>
+                <div class="stat-icon bg-info bg-opacity-10 text-info rounded p-2"><i class="bi bi-activity"></i></div>
+              </div>
+              <h2 class="fw-bold mb-1">{{ activeOpportunitiesCount | number }}</h2>
+              <div class="small text-success"><i class="bi bi-arrow-up-short"></i> Open / In Progress</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-card p-4 rounded-4 shadow-sm h-100 bg-white border">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted fw-bold small text-uppercase">Completed Opportunities</span>
+                <div class="stat-icon bg-orange-light text-orange rounded p-2"><i class="bi bi-check-circle"></i></div>
+              </div>
+              <h2 class="fw-bold mb-1">{{ completedOpportunitiesCount | number }}</h2>
+              <div class="small text-success"><i class="bi bi-arrow-up-short"></i> Processed</div>
             </div>
           </div>
         </div>
@@ -414,6 +439,154 @@
                   🗑️ Delete Administrator Account
                 </button>
                 <p class="extra-small text-danger mt-2 opacity-75">Warning: This will permanently remove your account and cannot be recovered.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Activity Monitoring -->
+      <div *ngIf="activeMenu === 'user-activity'" class="animate-fade-in">
+        <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
+          <div class="card-header bg-white border-0 p-4 d-flex justify-content-between align-items-center">
+            <div>
+              <h5 class="fw-bold mb-1">User Activity Monitoring</h5>
+              <p class="text-muted small mb-0">Track engagement and actions across all users.</p>
+            </div>
+            <div class="d-flex gap-2">
+              <select class="form-select form-select-sm rounded-pill px-3" [(ngModel)]="userActivityFilter" (change)="filterActivityUsers()">
+                <option value="all">All Roles</option>
+                <option value="user">Citizens/Users</option>
+                <option value="volunteer">Volunteers</option>
+                <option value="ngo">NGOs</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="card-body p-0">
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-none d-md-block">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="px-4 py-3 border-0">User</th>
+                    <th class="py-3 border-0">Role & Location</th>
+                    <th class="py-3 border-0">Joined</th>
+                    <th class="px-4 py-3 border-0 text-end">Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let activityUser of filteredActivityUsers">
+                    <td class="px-4 py-3">
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-sm rounded-circle overflow-hidden bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width:40px; height:40px">
+                          <img *ngIf="activityUser.profileImage" [src]="activityUser.profileImage" alt="Profile" class="w-100 h-100 object-fit-cover" />
+                          <span *ngIf="!activityUser.profileImage" class="fw-bold">{{ activityUser.name.charAt(0) }}</span>
+                        </div>
+                        <div>
+                          <div class="fw-bold text-dark">{{ activityUser.name }}</div>
+                          <div class="small text-muted">{{ activityUser.email }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge rounded-pill me-2 px-3" 
+                        [class.bg-success]="activityUser.role === 'volunteer'" 
+                        [class.bg-primary]="activityUser.role === 'user' || activityUser.role === 'citizen'"
+                        [class.bg-info]="activityUser.role === 'ngo'"
+                        [class.bg-dark]="activityUser.role === 'admin'">
+                        {{ activityUser.role | titlecase }}
+                      </span>
+                      <div class="small text-muted mt-1"><i class="bi bi-geo-alt me-1"></i>{{ activityUser.location || 'N/A' }}</div>
+                    </td>
+                    <td><span class="small">{{ activityUser.joinedDate | date:'mediumDate' }}</span></td>
+                    <td class="px-4 text-end">
+                      <button class="btn btn-sm btn-outline-primary rounded-pill px-3" (click)="viewUserActivityProfile(activityUser)">View Profile</button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="filteredActivityUsers.length === 0">
+                    <td colspan="4" class="text-center py-5 text-muted">No users found.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Mobile View -->
+            <div class="d-md-none">
+              <div *ngFor="let activityUser of filteredActivityUsers" class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-bold">{{ activityUser.name }} <span class="badge bg-secondary extra-small ms-1">{{ activityUser.role | titlecase }}</span></div>
+                  <div class="extra-small text-muted">{{ activityUser.location || 'No location' }}</div>
+                </div>
+                <button class="btn btn-sm btn-outline-primary rounded-circle" (click)="viewUserActivityProfile(activityUser)"><i class="bi bi-eye"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Detailed View Modal/Section -->
+        <div *ngIf="selectedUserActivity" class="card border-0 shadow-sm rounded-4 bg-white mt-4 border-top border-4 border-primary">
+          <div class="card-header bg-white border-0 p-4 d-flex justify-content-between align-items-center border-bottom">
+            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+              Profile Overview: {{ selectedUserActivity.name }}
+              <span *ngIf="selectedUserActivity.isSuspended" class="badge bg-danger fs-6 rounded-pill">Suspended</span>
+            </h5>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm px-4 rounded-pill" 
+                [class.btn-outline-danger]="!selectedUserActivity.isSuspended"
+                [class.btn-outline-success]="selectedUserActivity.isSuspended"
+                (click)="toggleUserSuspension(selectedUserActivity)">
+                <i class="bi" [class.bi-slash-circle]="!selectedUserActivity.isSuspended" [class.bi-check-circle]="selectedUserActivity.isSuspended"></i> 
+                {{ selectedUserActivity.isSuspended ? 'Unsuspend User' : 'Suspend User' }}
+              </button>
+              <button class="btn btn-sm btn-light rounded-circle" (click)="closeUserActivityProfile()">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body p-4">
+            <div class="row g-4">
+              <div class="col-md-6">
+                <h6 class="fw-bold text-muted text-uppercase small mb-3">User Details</h6>
+                <p><strong>Bio:</strong> {{ selectedUserActivity.bio || 'No bio provided.' }}</p>
+                <div class="mb-2"><strong>Skills:</strong></div>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                  <span *ngFor="let skill of selectedUserActivity.skills" class="badge bg-light text-dark border px-3 py-2 rounded-pill">{{ skill }}</span>
+                  <span *ngIf="!selectedUserActivity.skills?.length" class="text-muted small">None documented</span>
+                </div>
+              </div>
+              <div class="col-md-6 border-start-md">
+                <h6 class="fw-bold text-muted text-uppercase small mb-3">Activity Status</h6>
+                
+                <div *ngIf="selectedUserActivity.role === 'volunteer'" class="d-flex flex-column gap-3">
+                  <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
+                    <span class="small fw-bold"><i class="bi bi-file-earmark-text text-primary me-2"></i>Applications Submitted</span>
+                    <span class="badge bg-primary rounded-pill fs-6">{{ selectedUserActivity.activity?.applicationsSubmitted || 0 }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
+                    <span class="small fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Applications Accepted</span>
+                    <span class="badge bg-success rounded-pill fs-6">{{ selectedUserActivity.activity?.applicationsAccepted || 0 }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
+                    <span class="small fw-bold"><i class="bi bi-truck text-warning me-2"></i>Completed Pickups</span>
+                    <span class="badge bg-warning text-dark rounded-pill fs-6">{{ selectedUserActivity.activity?.completedPickups || 0 }}</span>
+                  </div>
+                </div>
+                
+                <div *ngIf="selectedUserActivity.role === 'user' || selectedUserActivity.role === 'citizen'" class="d-flex flex-column gap-3">
+                  <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
+                    <span class="small fw-bold"><i class="bi bi-trash text-primary me-2"></i>Waste Requests Created</span>
+                    <span class="badge bg-primary rounded-pill fs-6">{{ selectedUserActivity.activity?.requestsCreated || 0 }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
+                    <span class="small fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Waste Requests Completed</span>
+                    <span class="badge bg-success rounded-pill fs-6">{{ selectedUserActivity.activity?.requestsCompleted || 0 }}</span>
+                  </div>
+                </div>
+                
+                <div *ngIf="selectedUserActivity.role === 'ngo' || selectedUserActivity.role === 'admin'" class="p-4 bg-light rounded-3 text-center">
+                  <p class="mb-0 small text-muted">Activity tracking is prioritized for Citizens and Volunteers.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -708,6 +881,179 @@
               
               <div *ngIf="allOpportunities.length === 0" class="text-center py-5 text-muted small">
                 No opportunities yet.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div *ngIf="activeMenu === 'messages'" class="animate-fade-in">
+        <div class="row">
+          <div class="col-lg-8 mx-auto">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+              <div>
+                <h2 class="fw-bold mb-1">💬 Communications Hub</h2>
+                <p class="text-muted mb-0">Directly message Volunteers about pickups or applications</p>
+              </div>
+            </div>
+
+            <div *ngIf="(conversations$ | async) as convos">
+              <!-- Empty State -->
+              <div *ngIf="convos.length === 0" class="card border-0 shadow-sm rounded-4 text-center p-5 bg-white mb-4">
+                <div class="mx-auto mb-3 bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                  <i class="bi bi-chat-square-dots fs-1"></i>
+                </div>
+                <h5 class="fw-bold mb-2">No active messages</h5>
+                <p class="text-muted small mb-0">You have no message history. Start a chat from the Applications view.</p>
+              </div>
+
+              <!-- Conversation List -->
+              <div class="row g-3" *ngIf="convos.length > 0">
+                <div class="col-12" *ngFor="let conv of convos">
+                  <a [routerLink]="['/chat', conv.partnerId, conv.partnerName]" 
+                     class="card border-0 shadow-sm text-decoration-none text-dark hover-lift transition-all rounded-4">
+                    <div class="card-body p-3 p-md-4 d-flex align-items-center">
+                      <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 50px; height: 50px;">
+                        <i class="bi bi-person-fill fs-3"></i>
+                      </div>
+                      <div class="flex-grow-1 overflow-hidden pe-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                          <h6 class="mb-0 fw-bold text-truncate">{{ conv.partnerName }}</h6>
+                          <small class="text-muted ms-2 text-nowrap opacity-75">{{ conv.lastMessageTime | date:'shortTime' }}</small>
+                        </div>
+                        <p class="mb-0 small text-truncate" [ngClass]="conv.unreadCount > 0 ? 'fw-bold text-dark' : 'text-muted'">
+                          {{ conv.lastMessage }}
+                        </p>
+                      </div>
+                      <div class="ms-2 ms-md-3 d-flex align-items-center flex-shrink-0" *ngIf="conv.unreadCount > 0">
+                        <span class="badge bg-danger rounded-pill">{{ conv.unreadCount }}</span>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div *ngIf="activeMenu === 'notifications'" class="animate-fade-in">
+        <div class="row">
+          <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4 bg-white">
+              <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-bell me-2 text-primary"></i>All Notifications</h5>
+              </div>
+              
+              <div class="list-group list-group-flush" *ngIf="(notifications$ | async) as notificationsList">
+                <div *ngIf="notificationsList.length === 0" class="text-center py-5 text-muted">
+                  <i class="bi bi-bell-slash fs-1 text-opacity-50 mb-3 d-block"></i>
+                  <h5>You're all caught up!</h5>
+                  <p class="mb-0">No new notifications at this time.</p>
+                </div>
+
+                <div *ngFor="let notif of notificationsList" 
+                     class="list-group-item py-4 border-bottom position-relative hover-lift transition-all"
+                     [ngStyle]="{'background-color': notif.read ? '#ffffff' : '#f8f9fa', 'border-left': notif.read ? '4px solid transparent' : '4px solid #0d6efd'}">
+                     
+                  <div class="d-flex gap-3 align-items-start">
+                    <div class="rounded-circle p-2 bg-opacity-10 d-flex align-items-center justify-content-center" 
+                         [ngClass]="'bg-' + notif.type + ' text-' + notif.type" style="width: 45px; height: 45px;">
+                      <i class="bi fs-5" [ngClass]="getIconForType(notif.type)"></i>
+                    </div>
+                    
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong class="text-dark fs-6">{{notif.title}}</strong>
+                        <small class="text-muted">{{notif.timestamp | date:'shortTime'}}</small>
+                      </div>
+                      <p class="mb-2 text-muted text-wrap">{{notif.message}}</p>
+                      <div *ngIf="!notif.read">
+                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3 mt-1" (click)="markAsRead(notif.id)">
+                          <i class="bi bi-check2 me-1"></i>Mark as read
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Logs & Settings -->
+      <div *ngIf="activeMenu === 'admin-logs'" class="animate-fade-in">
+        <div class="row g-4">
+          <!-- System Alert Broadcast -->
+          <div class="col-md-5">
+            <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
+              <div class="card-header bg-white border-0 p-4">
+                <h5 class="fw-bold mb-1">Broadcast System Alert</h5>
+                <p class="text-muted small mb-0">Send a platform-wide notification.</p>
+              </div>
+              <div class="card-body p-4 pt-0">
+                <form (ngSubmit)="broadcastSystemAlert()">
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Target Audience</label>
+                    <select class="form-select rounded-3" [(ngModel)]="alertTarget" name="alertTarget">
+                      <option value="all">All Users</option>
+                      <option value="volunteer">Volunteers Only</option>
+                      <option value="citizen">Citizens Only</option>
+                      <option value="ngo">NGOs Only</option>
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Alert Message</label>
+                    <textarea class="form-control rounded-3" [(ngModel)]="alertMessage" name="alertMessage" rows="4" required placeholder="Type the important announcement here..."></textarea>
+                  </div>
+                  <button type="submit" class="btn btn-warning w-100 rounded-pill fw-bold text-dark" [disabled]="!alertMessage.trim()">
+                    <i class="bi bi-broadcast me-2"></i> Send Broadcast
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Admin Action Logs Ledger -->
+          <div class="col-md-7">
+            <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+              <div class="card-header bg-white border-0 p-4 d-flex justify-content-between align-items-center">
+                <div>
+                  <h5 class="fw-bold mb-1">Administrative Audit Logs</h5>
+                  <p class="text-muted small mb-0">Record of all transparency actions taken by Admins.</p>
+                </div>
+                <button class="btn btn-sm btn-light rounded-circle" (click)="loadAdminLogs()">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light sticky-top">
+                      <tr>
+                        <th class="px-4 py-3 border-0">Timestamp</th>
+                        <th class="py-3 border-0">Action</th>
+                        <th class="px-4 py-3 border-0">Affected User/ID</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let log of adminLogs">
+                        <td class="px-4 py-3 text-muted small"><i class="bi bi-clock me-1"></i>{{ log.timestamp | date:'short' }}</td>
+                        <td><span class="fw-bold">{{ log.action }}</span></td>
+                        <td class="px-4">
+                          <span *ngIf="log.user_id?.name" class="badge bg-secondary">{{ log.user_id.name }} ({{ log.user_id.role }})</span>
+                          <span *ngIf="!log.user_id?.name" class="text-muted small font-monospace">{{ log.user_id || 'System' }}</span>
+                        </td>
+                      </tr>
+                      <tr *ngIf="adminLogs.length === 0">
+                        <td colspan="3" class="text-center py-5 text-muted">No admin actions logged yet.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>

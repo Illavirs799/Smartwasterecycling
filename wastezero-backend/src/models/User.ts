@@ -13,6 +13,7 @@ export interface IUser extends Document {
   resetPasswordExpires?: Date;
   created_at: Date;
   profileImage?: string;
+  isSuspended: boolean;
 }
 
 const UserSchema: Schema = new Schema({
@@ -32,7 +33,8 @@ const UserSchema: Schema = new Schema({
   resetPasswordOtp: { type: String },
   resetPasswordExpires: { type: Date },
   created_at: { type: Date, default: Date.now },
-  profileImage: { type: String }
+  profileImage: { type: String },
+  isSuspended: { type: Boolean, default: false }
 }, {
   toJSON: {
     transform: (doc, ret: any) => {

@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService, User } from '../../../services/auth.service';
 import { ChatService } from '../../../services/chat.service';
 import { ThemeService } from '../../../services/theme.service';
+import { NotificationService } from '../../../services/notification.service';
 
 @Component({
   selector: 'app-volunteer-layout',
@@ -17,11 +18,15 @@ export class VolunteerLayoutComponent implements OnInit {
   sidebarCollapsed = false;
   isDarkMode$ = this.themeService.isDarkMode$;
   unreadCount$ = this.chatService.unreadCount$;
+  notifications$ = this.notificationService.notifications$;
+  unreadNotifsCount$ = this.notificationService.getUnreadCount();
+  showNotifications = false;
 
   constructor(
     private authService: AuthService,
     private chatService: ChatService,
     private themeService: ThemeService,
+    private notificationService: NotificationService,
     private router: Router
   ) {}
 
@@ -50,5 +55,9 @@ export class VolunteerLayoutComponent implements OnInit {
   logout() {
     this.authService.logout();
     this.router.navigate(['/']);
+  }
+
+  markAsRead(id: string) {
+    this.notificationService.markAsRead(id);
   }
 }

@@ -36,9 +36,12 @@
               </div>
             </div>
 
-            <div class="db-opp-footer">
-              <button class="db-btn-accept" (click)="acceptPickup(opp)">
+            <div class="db-opp-footer d-flex flex-column gap-2">
+              <button class="db-btn-accept w-100" (click)="acceptPickup(opp)">
                 Accept Assignment 🚛
+              </button>
+              <button *ngIf="opp.citizenName" [routerLink]="['/chat', opp.citizenId, opp.citizenName]" class="btn btn-outline-success btn-sm w-100 rounded-pill">
+                <i class="bi bi-chat-dots me-1"></i> Message Citizen
               </button>
             </div>
           </div>
@@ -74,11 +77,14 @@
               </div>
             </div>
 
-            <div class="ngo-project-footer">
-            <button class="db-btn-apply" 
+            <div class="ngo-project-footer d-flex flex-column gap-2">
+            <button class="db-btn-apply w-100" 
                     [disabled]="hasApplied(project._id || project.id)"
                     (click)="applyForProject(project)">
               {{ hasApplied(project._id || project.id) ? 'Applied' : 'Apply for Project' }}
+            </button>
+            <button *ngIf="project.ngo_id" [routerLink]="['/chat', project.ngo_id._id || project.ngo_id, project.organizationName || 'Organization']" class="btn btn-outline-success btn-sm w-100 rounded-pill mt-2">
+                <i class="bi bi-chat-dots me-1"></i> Message Coordinator
             </button>
           </div>
         </div>
