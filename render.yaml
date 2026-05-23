@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: wastezero-backend
+    env: node
+    plan: starter
+    rootDir: wastezero-backend
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false # Render will prompt you for this value in the dashboard
