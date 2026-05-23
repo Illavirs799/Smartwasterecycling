@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { BrowserModule, provideClientHydration } from '@angular/platform-browser';
+import { BrowserModule } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -47,7 +47,6 @@ import { PickupRequestComponent } from './pages/pickup-request/pickup-request.co
     MessagesComponent
   ],
   providers: [
-    provideClientHydration(),
     provideHttpClient(withFetch()),
     DatePipe
   ],
